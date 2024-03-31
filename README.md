@@ -1,1 +1,1 @@
-# Bachelor_theis_AI_-Ollama
+# Bachelor_theis_AI_Ollama
