@@ -3,6 +3,7 @@ import tempfile
 import streamlit as st
 from streamlit_chat import message
 from rag import Rag
+from validation import is_valid_url, validate_file
 
 # Set the page configuration for Streamlit
 st.set_page_config(page_title="💬 AI Chatbot")
@@ -44,16 +45,20 @@ def read_and_save_file():
     sidebar_placeholder = st.session_state.get("sidebar_status_placeholder")
     
     for file in st.session_state["file_uploader"]:
-        with tempfile.NamedTemporaryFile(delete=False) as tf:
-            tf.write(file.getbuffer())
-            file_path = tf.name
+        print(f"FILE: {file}")
+        if validate_file(st, file):
+            with tempfile.NamedTemporaryFile(delete=False) as tf:
+                tf.write(file.getbuffer())
+                file_path = tf.name
 
-        sidebar_placeholder.markdown(f"🔄 Ingesting {file.name}...")
+            sidebar_placeholder.markdown(f"🔄 Ingesting {file.name}...")
 
-        st.session_state["assistant"].ingest(file_path)
-        os.remove(file_path)
+            st.session_state["assistant"].ingest(file_path)
+            os.remove(file_path)
 
-        sidebar_placeholder.markdown("✅ Ingestion complete!")
+            sidebar_placeholder.markdown("✅ Ingestion complete!")
+        else:
+             st.sidebar.error("FILE is not valid. Please enter a valid URL.")
 
 def process_url_input():
     # Ingests content from the provided URL through the assistant
