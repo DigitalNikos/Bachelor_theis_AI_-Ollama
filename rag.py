@@ -87,7 +87,7 @@ class Rag:
                 content=combined_query
             )
         ]
-        print(f"retriever: {self.retriever.get_relevant_documents(query)}")
+        # print(f"retriever: {self.retriever.get_relevant_documents(query)}")
         if not self.chain:
             answer = self.model.invoke(messages).content
             print(f"Answer: {answer}")
@@ -99,6 +99,16 @@ class Rag:
         self.conversation_history.append(query)
         self.conversation_history.append(answer)
         return answer
+    
+    def update_model(self, model_name):
+        """
+        Updates the model used by the Rag instance.
+
+        Parameters:
+        - model_name: str - The name of the new model to use.
+        """
+        self.model = ChatOllama(model=model_name)
+        self.conversation_history = []
 
     def clear(self):
         self.vector_store = None

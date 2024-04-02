@@ -82,18 +82,18 @@ def page():
         st.session_state["url_input"] = ""
 
     st.header("💬 AI Chatbot")
-
+    print("HI")
     if "model_selection" not in st.session_state:
         st.session_state["model_selection"] = "mistral"  # Default model selection
     
-    model_options = ["mistral", "llama2"] 
+    model_options = get_ollama_models()
     st.sidebar.selectbox("Select LLM Model :robot_face::", model_options, key="model_selection", on_change=on_model_selection_change)
     
     if "assistant" not in st.session_state:
         initialize_or_update_assistant(st.session_state.model_selection)
 
-    global file_details_placeholder
-    file_details_placeholder = st.sidebar.empty()
+    # global file_details_placeholder
+    # file_details_placeholder = st.sidebar.empty()
     st.sidebar.text_input("Enter a URL", key="url_input", on_change=process_url_input)
     st.sidebar.file_uploader("Upload document", type=["pdf", "txt", "doc", "docx"], key="file_uploader", accept_multiple_files=True, on_change=read_and_save_file)
 
