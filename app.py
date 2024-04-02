@@ -3,6 +3,7 @@ import tempfile
 import streamlit as st
 from streamlit_chat import message
 from rag import Rag
+from models import get_ollama_models
 
 
 # Set the page configuration for Streamlit
@@ -103,4 +104,5 @@ def page():
     st.chat_input("Message", key="user_input", on_submit=process_input)
 
 if __name__ == "__main__":
+    print(f"Print models: {get_ollama_models()}")
     page()

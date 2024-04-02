@@ -32,20 +32,9 @@ class Rag:
         )
 
     def ingest(self, pdf_file_path: str, file_extension: str):
-        if file_extension == '.pdf':
-            docs = PyPDFLoader(file_path=pdf_file_path).load()
-        elif file_extension in ['.txt', '.docx']:
-            if file_extension == '.txt':
-                with open(pdf_file_path, 'r', encoding='utf-8') as file:
-                    text_content = file.read()
-                # Wrap the text content in a similar structure to what your PDF loader returns
-                docs = [{'content': text_content, 'metadata': {'source': pdf_file_path}}]
-            elif file_extension == '.docx':
-                docs = handle_docx_file(pdf_file_path)
-        else:
-            # Handle unsupported file types
-            print(f"Unsupported file type: {file_extension}")
-            return
+        
+        docs = PyPDFLoader(file_path=pdf_file_path).load()
+        
 
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
