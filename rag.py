@@ -18,21 +18,35 @@ class Rag:
 
     def __init__(self, model_name="mistral"):
         self.model = ChatOllama(model=model_name)
-        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
+        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
         self.conversation_history = []
         self.prompt = PromptTemplate.from_template(
             """
-            <s> [INST] You are an assistant for answering questions. Use the following context clues to answer the question. 
+            <s> [INST] <<SYS>> You are an assistant for answering questions. Use the following context clues to answer the question. 
             If you don't know the answer, simply say that you don't know. 
-            Use a maximum of three sentences and be concise in your response. [/INST] </s> 
+            Use a maximum of three sentences and be concise in your response.<</SYS>> [/INST] </s> 
             [INST] Question: {question} 
             Context: {context} 
             Answer: [/INST]
             """
         )
 
-    def ingest(self, pdf_file_path: str):
-        docs = PyPDFLoader(file_path=pdf_file_path).load()
+    def ingest(self, pdf_file_path: str, file_extension: str):
+        if file_extension == '.pdf':
+            docs = PyPDFLoader(file_path=pdf_file_path).load()
+        elif file_extension in ['.txt', '.docx']:
+            if file_extension == '.txt':
+                with open(pdf_file_path, 'r', encoding='utf-8') as file:
+                    text_content = file.read()
+                # Wrap the text content in a similar structure to what your PDF loader returns
+                docs = [{'content': text_content, 'metadata': {'source': pdf_file_path}}]
+            elif file_extension == '.docx':
+                docs = handle_docx_file(pdf_file_path)
+        else:
+            # Handle unsupported file types
+            print(f"Unsupported file type: {file_extension}")
+            return
+
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
 
@@ -84,11 +98,17 @@ class Rag:
                 content=combined_query
             )
         ]
-
+        print(f"retriever: {self.retriever.get_relevant_documents(query)}")
         if not self.chain:
             answer = self.model.invoke(messages).content
+            print(f"Answer: {answer}")
+            self.conversation_history.append(query)
+            self.conversation_history.append(answer)
             return answer
         answer = self.chain.invoke(query)
+        print(f"Answer: {answer}")
+        self.conversation_history.append(query)
+        self.conversation_history.append(answer)
         return answer
 
     def clear(self):

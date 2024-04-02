@@ -3,7 +3,7 @@ import tempfile
 import streamlit as st
 from streamlit_chat import message
 from rag import Rag
-from validation import is_valid_url, validate_file
+
 
 # Set the page configuration for Streamlit
 st.set_page_config(page_title="💬 AI Chatbot")
@@ -45,20 +45,20 @@ def read_and_save_file():
     sidebar_placeholder = st.session_state.get("sidebar_status_placeholder")
     
     for file in st.session_state["file_uploader"]:
+        _, file_extension = os.path.splitext(file.name)
+        file_extension = file_extension.lower()
         print(f"FILE: {file}")
-        if validate_file(st, file):
-            with tempfile.NamedTemporaryFile(delete=False) as tf:
-                tf.write(file.getbuffer())
-                file_path = tf.name
+        # if validate_file(st, file):
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tf.write(file.getbuffer())
+            file_path = tf.name
 
-            sidebar_placeholder.markdown(f"🔄 Ingesting {file.name}...")
+        sidebar_placeholder.markdown(f"🔄 Ingesting {file.name}...")
 
-            st.session_state["assistant"].ingest(file_path)
-            os.remove(file_path)
+        st.session_state["assistant"].ingest(file_path, file_extension)
+        os.remove(file_path)
 
-            sidebar_placeholder.markdown("✅ Ingestion complete!")
-        else:
-             st.sidebar.error("FILE is not valid. Please enter a valid URL.")
+        sidebar_placeholder.markdown("✅ Ingestion complete!")
 
 def process_url_input():
     # Ingests content from the provided URL through the assistant
@@ -91,8 +91,10 @@ def page():
     if "assistant" not in st.session_state:
         initialize_or_update_assistant(st.session_state.model_selection)
 
+    global file_details_placeholder
+    file_details_placeholder = st.sidebar.empty()
     st.sidebar.text_input("Enter a URL", key="url_input", on_change=process_url_input)
-    st.sidebar.file_uploader("Upload document", type=["pdf"], key="file_uploader", accept_multiple_files=True, on_change=read_and_save_file)
+    st.sidebar.file_uploader("Upload document", type=["pdf", "txt", "doc", "docx"], key="file_uploader", accept_multiple_files=True, on_change=read_and_save_file)
 
     if "sidebar_status_placeholder" not in st.session_state:
         st.session_state["sidebar_status_placeholder"] = st.sidebar.empty()
