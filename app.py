@@ -3,23 +3,12 @@ import tempfile
 import streamlit as st
 from streamlit_chat import message
 from rag import Rag
-from models import get_ollama_models
+from models import get_ollama_models,  initialize_or_update_assistant, on_model_selection_change
 
 
-# Set the page configuration for Streamlit
+
 st.set_page_config(page_title="💬 AI Chatbot")
 
-def initialize_or_update_assistant(model_name):
-    # Initializes or updates the global assistant object based on the selected model
-    if "assistant" in st.session_state:
-        st.session_state["assistant"].update_model(model_name=model_name)
-    else:
-        st.session_state["assistant"] = Rag(model_name=model_name)
-
-def on_model_selection_change():
-    # Callback for handling changes in model selection from the sidebar
-    model_name = st.session_state.model_selection
-    initialize_or_update_assistant(model_name)
 
 def display_messages():
     # Displays user and assistant messages in the chat
@@ -49,17 +38,20 @@ def read_and_save_file():
         _, file_extension = os.path.splitext(file.name)
         file_extension = file_extension.lower()
         print(f"FILE: {file}")
-        # if validate_file(st, file):
+    
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             tf.write(file.getbuffer())
             file_path = tf.name
 
         sidebar_placeholder.markdown(f"🔄 Ingesting {file.name}...")
+        
 
         st.session_state["assistant"].ingest(file_path, file_extension)
         os.remove(file_path)
 
         sidebar_placeholder.markdown("✅ Ingestion complete!")
+        
+
 
 def process_url_input():
     # Ingests content from the provided URL through the assistant
@@ -74,6 +66,16 @@ def process_url_input():
         
         st.session_state["url_input"] = ""
 
+        # app.py
+def display_all_data():
+    if "assistant" in st.session_state:
+        assistant = st.session_state["assistant"]
+        all_data = assistant.list_all_data()
+        st.write(f"All data: {all_data}")  # Using Streamlit to display the data
+    else:
+        st.error("Assistant not initialized.")
+
+
 def page():
     # Main function to structure the Streamlit page
     if "messages" not in st.session_state:
@@ -82,18 +84,16 @@ def page():
         st.session_state["url_input"] = ""
 
     st.header("💬 AI Chatbot")
-    print("HI")
+    
     if "model_selection" not in st.session_state:
-        st.session_state["model_selection"] = "mistral"  # Default model selection
+        st.session_state["model_selection"] = "mistral"  
     
     model_options = get_ollama_models()
     st.sidebar.selectbox("Select LLM Model :robot_face::", model_options, key="model_selection", on_change=on_model_selection_change)
     
     if "assistant" not in st.session_state:
-        initialize_or_update_assistant(st.session_state.model_selection)
+        initialize_or_update_assistant(st, st.session_state.model_selection)
 
-    # global file_details_placeholder
-    # file_details_placeholder = st.sidebar.empty()
     st.sidebar.text_input("Enter a URL", key="url_input", on_change=process_url_input)
     st.sidebar.file_uploader("Upload document", type=["pdf", "txt", "doc", "docx"], key="file_uploader", accept_multiple_files=True, on_change=read_and_save_file)
 

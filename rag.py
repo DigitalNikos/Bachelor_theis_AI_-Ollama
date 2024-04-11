@@ -19,7 +19,6 @@ class Rag:
     def __init__(self, model_name="mistral"):
         self.model = ChatOllama(model=model_name)
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
-        self.conversation_history = []
         self.prompt = PromptTemplate.from_template(
             """
             <s> [INST] <<SYS>> You are an assistant for answering questions. Use the following context clues to answer the question. 
@@ -33,8 +32,7 @@ class Rag:
 
     def ingest(self, pdf_file_path: str, file_extension: str):
         
-        docs = PyPDFLoader(file_path=pdf_file_path).load()
-        
+        docs = PyPDFLoader(file_path=pdf_file_path).load()        
 
         chunks = self.text_splitter.split_documents(docs)
         chunks = filter_complex_metadata(chunks)
@@ -45,15 +43,15 @@ class Rag:
                 # Add or update the title in the metadata
                 doc.metadata['title'] = "Malakia"
 
-        vector_store = Chroma.from_documents(documents=chunks, embedding=FastEmbedEmbeddings())
-        self.retriever = vector_store.as_retriever(
+        self.vector_store = Chroma.from_documents(documents=chunks, embedding=FastEmbedEmbeddings())
+        self.retriever = self.vector_store.as_retriever(
             search_type="similarity_score_threshold",
             search_kwargs={
                 "k": 3,
                 "score_threshold": 0.5,
             },
         )
-
+        
         self.chain = ({"context": self.retriever, "question": RunnablePassthrough()}
                       | self.prompt
                       | self.model
@@ -80,24 +78,33 @@ class Rag:
                   | StrOutputParser())
 
     def ask(self, query: str):
-        context = " ".join(self.conversation_history[-5:]) 
+        docs = self.vector_store.similarity_search(query)[0]
+        print(f"DOCS: {docs}")
+        # print(f"Docs  ::::::::: {docs[0].page_content}")
+        
+        # context = " ".join(self.conversation_history[-5:]) 
+        # combined_query = f"{context} {query}"
+        # print(f"Ask context: {context}")
+        # messages = [
+        #     HumanMessage(
+        #         content=combined_query
+        #     )
+        # ]
+
+        context = docs.page_content
         combined_query = f"{context} {query}"
         messages = [
             HumanMessage(
                 content=combined_query
             )
         ]
-        # print(f"retriever: {self.retriever.get_relevant_documents(query)}")
+        print(f"retriever: {self.retriever.get_relevant_documents(query)}")
         if not self.chain:
             answer = self.model.invoke(messages).content
-            print(f"Answer: {answer}")
-            self.conversation_history.append(query)
-            self.conversation_history.append(answer)
+            print(f"Answer not in chain: {answer}")
             return answer
-        answer = self.chain.invoke(query)
+        answer = self.model.invoke(combined_query).content
         print(f"Answer: {answer}")
-        self.conversation_history.append(query)
-        self.conversation_history.append(answer)
         return answer
     
     def update_model(self, model_name):

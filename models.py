@@ -1,4 +1,5 @@
 import subprocess
+from rag import Rag
 
 def get_ollama_models():
     """
@@ -15,3 +16,16 @@ def get_ollama_models():
     except subprocess.CalledProcessError as e:
         print("Failed to list ollama models:", e)
         return []
+    
+def initialize_or_update_assistant(st, model_name):
+    # Initializes or updates the global assistant object based on the selected model
+    if "assistant" in st.session_state:
+        st.session_state["assistant"].update_model(model_name=model_name)
+    else:
+        st.session_state["assistant"] = Rag(model_name=model_name)
+
+def on_model_selection_change(st):
+    # Callback for handling changes in model selection from the sidebar
+    model_name = st.session_state.model_selection
+    print(f"model_name: {model_name}")
+    initialize_or_update_assistant(model_name)
